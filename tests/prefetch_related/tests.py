@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, QuerySet, ValuesPrefetcher
 from django.db.models.query import get_prefetcher, prefetch_related_objects
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
@@ -1528,3 +1528,30 @@ class ReadPrefetchedObjectsCacheTests(TestCase):
         with self.assertNumQueries(4):
             # AuthorWithAge -> Author -> FavoriteAuthors, Book
             self.assertQuerysetEqual(authors, ['<AuthorWithAge: Rousseau>', '<AuthorWithAge: Voltaire>'])
+
+
+class Ticket26565Tests(TestDataMixin, TestCase):
+
+    def test_values_list_forward_many_to_many(self):
+        with self.assertNumQueries(2):
+            prefetch_qs = Author.objects.values('id', 'name')
+            prefetch = Prefetch(
+                'authors',
+                queryset=prefetch_qs,
+                prefetcher=ValuesPrefetcher(
+                    lambda
+                ),
+            )
+            lists = [list(b.authors.all()) for b in Book.objects.prefetch_related(prefetch)]
+
+        normal_lists = [list(b.authors.values_list('id', 'name')) for b in Book.objects.all()]
+        self.assertEqual(lists, normal_lists)
+
+    def test_values_list_backward_many_to_many(self):
+        with self.assertNumQueries(2):
+            prefetch_qs = Book.objects.values('id', 'title')
+            prefetch = Prefetch('books', queryset=prefetch_qs)
+            lists = [list(a.books.all()) for a in Author.objects.prefetch_related(prefetch)]
+
+        normal_lists = [list(a.books.values_list('id', 'title')) for a in Author.objects.all()]
+        self.assertEqual(lists, normal_lists)

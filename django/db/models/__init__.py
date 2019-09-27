@@ -22,7 +22,7 @@ from django.db.models.indexes import __all__ as indexes_all
 from django.db.models.lookups import Lookup, Transform
 from django.db.models.manager import Manager
 from django.db.models.query import (
-    Prefetch, Q, QuerySet, prefetch_related_objects,
+    Prefetch, Q, QuerySet, prefetch_related_objects, ValuesPrefetcher,
 )
 from django.db.models.query_utils import FilteredRelation
 
@@ -43,8 +43,8 @@ __all__ += [
     'Func', 'OuterRef', 'RowRange', 'Subquery', 'Value', 'ValueRange', 'When',
     'Window', 'WindowFrame',
     'FileField', 'ImageField', 'OrderWrt', 'Lookup', 'Transform', 'Manager',
-    'Prefetch', 'Q', 'QuerySet', 'prefetch_related_objects', 'DEFERRED', 'Model',
-    'FilteredRelation',
+    'Prefetch', 'Q', 'QuerySet', 'prefetch_related_objects', 'ValuesPrefetcher',
+    'DEFERRED', 'Model', 'FilteredRelation',
     'ForeignKey', 'ForeignObject', 'OneToOneField', 'ManyToManyField',
     'ManyToOneRel', 'ManyToManyRel', 'OneToOneRel',
 ]

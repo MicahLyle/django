@@ -1500,19 +1500,37 @@ class RawQuerySet:
         return model_fields
 
 
+class ValuesPrefetcher:
+    def __init__(self, rel_join, instance_join):
+        self.rel_join = rel_join
+        self.instance_join = instance_join
+
+    def get_prefetch_queryset(self, instances, queryset=None):
+        assert queryset is not None, "queryset is required if we're using ValuesPrefetcher."
+        return (
+            queryset,
+            self.rel_join,
+            self.instance_join,
+            False,
+            'figure_this_out',
+            False,
+        )
+
+
 class Prefetch:
-    def __init__(self, lookup, queryset=None, to_attr=None):
+    def __init__(self, lookup, queryset=None, to_attr=None, prefetcher=None):
         # `prefetch_through` is the path we traverse to perform the prefetch.
         self.prefetch_through = lookup
         # `prefetch_to` is the path to the attribute that stores the result.
         self.prefetch_to = lookup
-        if queryset is not None and not issubclass(queryset._iterable_class, ModelIterable):
-            raise ValueError('Prefetch querysets cannot use values().')
+        if queryset is not None and prefetcher is None and not issubclass(queryset._iterable_class, ModelIterable):
+            raise ValueError('Must provide a prefetcher when using values() or values_list().')
         if to_attr:
             self.prefetch_to = LOOKUP_SEP.join(lookup.split(LOOKUP_SEP)[:-1] + [to_attr])
 
         self.queryset = queryset
         self.to_attr = to_attr
+        self.prefetcher = prefetcher
 
     def __getstate__(self):
         obj_dict = self.__dict__.copy()
@@ -1629,7 +1647,7 @@ def prefetch_related_objects(model_instances, *related_lookups):
             # of prefetch_related), so what applies to first object applies to all.
             first_obj = obj_list[0]
             to_attr = lookup.get_current_to_attr(level)[0]
-            prefetcher, descriptor, attr_found, is_fetched = get_prefetcher(first_obj, through_attr, to_attr)
+            prefetcher, descriptor, attr_found, is_fetched = get_prefetcher(first_obj, through_attr, to_attr, override_prefetcher=lookup.prefetcher)
 
             if not attr_found:
                 raise AttributeError("Cannot find '%s' on %s object, '%s' is an invalid "
@@ -1687,7 +1705,7 @@ def prefetch_related_objects(model_instances, *related_lookups):
                 obj_list = new_obj_list
 
 
-def get_prefetcher(instance, through_attr, to_attr):
+def get_prefetcher(instance, through_attr, to_attr, override_prefetcher=None):
     """
     For the attribute 'through_attr' on the given instance, find
     an object that has a get_prefetch_queryset().
@@ -1731,7 +1749,7 @@ def get_prefetcher(instance, through_attr, to_attr):
                         is_fetched = hasattr(instance, to_attr)
                 else:
                     is_fetched = through_attr in instance._prefetched_objects_cache
-    return prefetcher, rel_obj_descriptor, attr_found, is_fetched
+    return override_prefetcher or prefetcher, rel_obj_descriptor, attr_found, is_fetched
 
 
 def prefetch_one_level(instances, prefetcher, lookup, level):
