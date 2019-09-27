@@ -1535,13 +1535,7 @@ class Ticket26565Tests(TestDataMixin, TestCase):
     def test_values_list_forward_many_to_many(self):
         with self.assertNumQueries(2):
             prefetch_qs = Author.objects.values('id', 'name')
-            prefetch = Prefetch(
-                'authors',
-                queryset=prefetch_qs,
-                prefetcher=ValuesPrefetcher(
-                    lambda
-                ),
-            )
+            prefetch = Prefetch('authors', queryset=prefetch_qs)
             lists = [list(b.authors.all()) for b in Book.objects.prefetch_related(prefetch)]
 
         normal_lists = [list(b.authors.values_list('id', 'name')) for b in Book.objects.all()]
